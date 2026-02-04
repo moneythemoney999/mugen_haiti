@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import nécessaire pour SystemChrome
 
-void main() {
+// La fonction main devient "async" pour pouvoir utiliser "await"
+void main() async {
+  // On s'assure que tout est prêt avant de définir l'orientation
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // On force le mode paysage
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+
+  // On lance l'application
   runApp(const MonJeu());
 }
 
