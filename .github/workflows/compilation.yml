@@ -42,9 +42,12 @@ jobs:
       - name: Installation de Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.38.9'
           channel: 'stable'
           cache: true # Active la mise en cache pour Pub
+
+      - name: Vérification de l'installation de Flutter
+        run: flutter doctor -v
 
       # 5. Installe les dépendances (sera rapide si le cache existe)
       - name: Installation des dépendances Dart
