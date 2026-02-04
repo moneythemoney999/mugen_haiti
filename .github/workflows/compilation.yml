@@ -26,7 +26,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-      
+
       # 3. Met en cache les dépendances Gradle
       - name: Mise en cache de Gradle
         uses: actions/cache@v4
@@ -45,9 +45,6 @@ jobs:
           flutter-version: '3.38.9'
           channel: 'stable'
           cache: true # Active la mise en cache pour Pub
-
-      - name: Vérification de l'installation de Flutter
-        run: flutter doctor -v
 
       # 5. Installe les dépendances (sera rapide si le cache existe)
       - name: Installation des dépendances Dart
