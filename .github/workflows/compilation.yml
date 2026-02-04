@@ -53,9 +53,12 @@ jobs:
       - name: Installation des dépendances Dart
         run: flutter pub get
 
-      # 6. Construit l'APK de débogage
-      - name: Construction de l'APK
-        run: flutter build apk --debug
+      - name: Compilation de l'APK pour Android
+        run: flutter build apk --debug --target=lib/mugen_haiti.dart
+
+      # 6. Compile l'application pour iOS (sans signature de code)
+      - name: Compilation pour iOS
+        run: flutter build ios --no-codesign --target=lib/mugen_haiti.dart
 
       # 7. Met en ligne l'APK généré comme "artefact"
       - name: Mise en ligne de l'APK
