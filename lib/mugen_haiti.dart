@@ -17,8 +17,6 @@ class MonJeu extends StatelessWidget {
   }
 }
 
-// On re-transforme notre page en "StatefulWidget" pour pouvoir
-// sauvegarder et modifier la position du personnage.
 class PageJeu extends StatefulWidget {
   const PageJeu({Key? key}) : super(key: key);
 
@@ -27,42 +25,72 @@ class PageJeu extends StatefulWidget {
 }
 
 class _EtatPageJeu extends State<PageJeu> {
-  // On définit une position X et Y pour notre personnage.
-  // Pour l'instant, on met des valeurs fixes pour tester.
-  double _positionX = 150.0;
-  double _positionY = 250.0;
+  // On initialise les positions à 0.
+  double _positionX = 0.0;
+  double _positionY = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // On utilise la méthode sûre pour centrer le personnage au démarrage.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final tailleEcran = MediaQuery.of(context).size;
+        setState(() {
+          _positionX = tailleEcran.width / 2;
+          _positionY = tailleEcran.height / 2;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[800],
-      // On utilise un "Stack" pour nous permettre de superposer des widgets.
-      // C'est parfait pour placer un personnage sur un fond.
-      body: Stack(
-        children: [
-          Positioned(
-            left: _positionX,
-            top: _positionY,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text(
-                  'MH',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
+      // Le GestureDetector détecte les gestes sur toute la surface de son enfant (le Stack).
+      body: GestureDetector(
+        // Cette fonction est appelée à chaque fois que le doigt glisse sur l'écran.
+        onPanUpdate: (details) {
+          // On met à jour l'état avec la nouvelle position du doigt.
+          setState(() {
+            _positionX = details.globalPosition.dx;
+            _positionY = details.globalPosition.dy;
+          });
+        },
+        child: Stack(
+          // On rend le Stack transparent aux clics pour que le GestureDetector derrière fonctionne bien
+          // sur toute la surface, même là où il n'y a pas de personnage.
+          fit: StackFit.expand, 
+          children: [
+            // On affiche seulement quand la position a été initialisée.
+            if (_positionX != 0.0 && _positionY != 0.0)
+              Positioned(
+                // On soustrait la moitié de la taille du cercle pour qu'il soit
+                // parfaitement centré sous le doigt, et non décalé.
+                left: _positionX - 50,
+                top: _positionY - 50,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'MH',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
