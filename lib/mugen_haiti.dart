@@ -27,23 +27,19 @@ class PageJeu extends StatefulWidget {
 class _EtatPageJeu extends State<PageJeu> {
   double _positionX = 0.0;
   double _positionY = 0.0;
-  // Ce drapeau nous dira si on peut afficher le personnage.
   bool _estInitialise = false;
 
   @override
   void initState() {
     super.initState();
+    // Dernière tentative de correction pour le centrage
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final tailleEcran = MediaQuery.of(context).size;
-        setState(() {
-          // On calcule la position centrale...
-          _positionX = tailleEcran.width / 2;
-          _positionY = tailleEcran.height / 2;
-          // ...et seulement maintenant, on autorise l'affichage.
-          _estInitialise = true;
-        });
-      }
+      final tailleEcran = MediaQuery.of(context).size;
+      setState(() {
+        _positionX = tailleEcran.width / 2;
+        _positionY = tailleEcran.height / 2;
+        _estInitialise = true;
+      });
     });
   }
 
@@ -52,7 +48,6 @@ class _EtatPageJeu extends State<PageJeu> {
     return Scaffold(
       backgroundColor: Colors.grey[800],
       body: GestureDetector(
-        // CORRECTION 1: On dit au détecteur de fonctionner sur toute la surface.
         behavior: HitTestBehavior.translucent,
         onPanUpdate: (details) {
           setState(() {
@@ -63,8 +58,6 @@ class _EtatPageJeu extends State<PageJeu> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // CORRECTION 2: On n'affiche le personnage que si le drapeau est vrai.
-            // Il ne s'affichera donc qu'au centre, à la deuxième frame.
             if (_estInitialise)
               Positioned(
                 left: _positionX - 50,
