@@ -61,34 +61,33 @@ class _EtatPageJeu extends State<PageJeu> {
         child: Stack(
           // On rend le Stack transparent aux clics pour que le GestureDetector derrière fonctionne bien
           // sur toute la surface, même là où il n'y a pas de personnage.
-          fit: StackFit.expand, 
+          fit: StackFit.expand,
           children: [
-            // On affiche seulement quand la position a été initialisée.
-            if (_positionX != 0.0 && _positionY != 0.0)
-              Positioned(
-                // On soustrait la moitié de la taille du cercle pour qu'il soit
-                // parfaitement centré sous le doigt, et non décalé.
-                left: _positionX - 50,
-                top: _positionY - 50,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'MH',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
+            // NOTE POUR LE DÉBOGAGE : La condition "if" a été retirée pour forcer l'affichage.
+            Positioned(
+              // On soustrait la moitié de la taille du cercle pour qu'il soit
+              // parfaitement centré sous le doigt, et non décalé.
+              left: _positionX - 50,
+              top: _positionY - 50,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text(
+                    'MH',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
