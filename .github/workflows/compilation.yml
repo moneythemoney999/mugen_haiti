@@ -1,0 +1,62 @@
+# Nom du workflow qui apparaîtra dans l'onglet "Actions" de GitHub
+name: Construire l'APK Android
+
+# Déclencheur : cette action se lancera à chaque "push" sur la branche principale
+on:
+  push:
+    branches:
+      - main
+      - master
+
+# Les tâches à exécuter
+jobs:
+  build:
+    # Le type de machine virtuelle à utiliser
+    runs-on: ubuntu-latest
+
+    # Les étapes du job
+    steps:
+      # 1. Récupère le code de votre dépôt
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      # 2. Installe Java (nécessaire pour le build Android)
+      - name: Installation de Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      # 3. Met en cache les dépendances Gradle
+      - name: Mise en cache de Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Installe Flutter et active le cache pour les paquets Pub
+      - name: Installation de Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+          cache: true # Active la mise en cache pour Pub
+
+      # 5. Installe les dépendances (sera rapide si le cache existe)
+      - name: Installation des dépendances Dart
+        run: flutter pub get
+
+      # 6. Construit l'APK de débogage
+      - name: Construction de l'APK
+        run: flutter build apk --debug
+
+      # 7. Met en ligne l'APK généré comme "artefact"
+      - name: Mise en ligne de l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mugen_haiti_apk # Nom de l'artefact
+          path: build/app/outputs/apk/debug/app-debug.apk # Chemin vers le fichier à mettre en ligne
