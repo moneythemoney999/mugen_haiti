@@ -101,7 +101,7 @@ class _EtatPageJeu extends State<PageJeu> {
               Expanded(
                 flex: 1, // Prend 1/3 de l'écran
                 child: Container(
-                  // Anciennement color: Colors.grey[700],
+                  color: Colors.grey[700], // Couleur pour distinguer la zone joystick
                   child: Align(
                     alignment: const Alignment(0, 0.7), // Aligne le joystick un peu vers le bas
                     child: ControleurJoystick(
@@ -196,31 +196,29 @@ class _EtatControleurJoystick extends State<ControleurJoystick> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
-        // Enregistre la position de départ pour calculer le déplacement relatif
-        // On ne réinitialise pas le stick à zéro ici, il suit le doigt
+        // Centrer le stick sur le point de contact initial
+        // Le localPosition est relatif au GestureDetector.
+        // On veut le positionner par rapport au centre de la base.
+        // Donc, on doit ajuster la position du stick.
+        Offset centreBase = Offset(_rayonBase, _rayonBase);
+        Offset pointDeContactRelatif = details.localPosition;
+
+        // Calculer le vecteur du point de contact par rapport au centre de la base
+        Offset vecteurContact = pointDeContactRelatif - centreBase;
+
+        // Limiter le stick à l'intérieur du rayon de la base
+        double distance = vecteurContact.distance;
+        if (distance > _rayonBase) {
+          vecteurContact = Offset.fromDirection(vecteurContact.direction, _rayonBase);
+        }
         setState(() {
-          // Centrer le stick sur le point de contact initial
-          // Le localPosition est relatif au GestureDetector.
-          // On veut le positionner par rapport au centre de la base.
-          // Donc, on doit ajuster la position du stick.
-          Offset centreBase = Offset(_rayonBase, _rayonBase);
-          Offset pointDeContactRelatif = details.localPosition;
-
-          // Calculer le vecteur du point de contact par rapport au centre de la base
-          Offset vecteurContact = pointDeContactRelatif - centreBase;
-
-          // Limiter le stick à l'intérieur du rayon de la base
-          double distance = vecteurContact.distance;
-          if (distance > _rayonBase) {
-            vecteurContact = Offset.fromDirection(vecteurContact.direction, _rayonBase);
-          }
           _positionStick = vecteurContact;
-
-          // Informe le parent du mouvement initial
-          double xNormalise = _positionStick.dx / _rayonBase;
-          double yNormalise = _positionStick.dy / _rayonBase;
-          widget.onMouvement(xNormalise, yNormalise);
         });
+
+        // Informe le parent du mouvement initial
+        double xNormalise = _positionStick.dx / _rayonBase;
+        double yNormalise = _positionStick.dy / _rayonBase;
+        widget.onMouvement(xNormalise, yNormalise);
       },
       onPanUpdate: (details) {
         setState(() {
