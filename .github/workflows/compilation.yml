@@ -56,7 +56,7 @@ jobs:
         run: flutter doctor -v
 
       - name: Compilation de l'APK pour Android
-        run: flutter build apk --debug --target=lib/mugen_haiti.dart
+        run: flutter build apk --debug
 
 
       # 7. Met en ligne l'APK généré comme "artefact"
