@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import nécessaire pour SystemChrome
-// import 'package:flutter_joystick/flutter_joystick.dart'; // Import pour le joystick (commenté pour débogage)
+import 'dart:math' as math; // Pour les calculs mathématiques comme sqrt et atan2
 
 // La fonction main devient "async" pour pouvoir utiliser "await"
 void main() async {
@@ -43,8 +43,8 @@ class _EtatPageJeu extends State<PageJeu> {
   double _positionYPersonnage = 0.0;
 
   // Variables pour le mouvement du joystick (seront mises à jour par le listener)
-  // double _mouvementJoystickX = 0.0; // Commenté pour débogage
-  // double _mouvementJoystickY = 0.0; // Commenté pour débogage
+  double _mouvementJoystickX = 0.0;
+  double _mouvementJoystickY = 0.0;
 
   bool _estInitialise = false; // Pour l'initialisation du personnage au centre
 
@@ -64,6 +64,14 @@ class _EtatPageJeu extends State<PageJeu> {
 
   @override
   Widget build(BuildContext context) {
+    // Calcul de la nouvelle position du personnage en fonction du joystick
+    // Ici, nous faisons un déplacement simple. Pour un vrai jeu, ce serait plus complexe
+    // (physique, collisions, etc.)
+    if (_mouvementJoystickX != 0 || _mouvementJoystickY != 0) {
+      _positionXPersonnage += _mouvementJoystickX * 5; // Multiplicateur de vitesse
+      _positionYPersonnage += _mouvementJoystickY * 5; // Multiplicateur de vitesse
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[800],
       body: Stack(
@@ -79,11 +87,13 @@ class _EtatPageJeu extends State<PageJeu> {
                   color: Colors.grey[700], // Couleur pour distinguer la zone joystick
                   child: Align(
                     alignment: const Alignment(0, 0.7), // Aligne le joystick un peu vers le bas
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      color: Colors.purple, // Un simple carré violet pour remplacer le joystick
-                      child: const Center(child: Text("Joystick", style: TextStyle(color: Colors.white))),
+                    child: ControleurJoystick(
+                      onMouvement: (x, y) {
+                        setState(() {
+                          _mouvementJoystickX = x;
+                          _mouvementJoystickY = y;
+                        });
+                      },
                     ),
                   ),
                 ),
@@ -136,6 +146,79 @@ class _EtatPageJeu extends State<PageJeu> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// Nouveau widget pour notre contrôleur de joystick personnalisé
+class ControleurJoystick extends StatefulWidget {
+  final Function(double x, double y) onMouvement;
+
+  const ControleurJoystick({Key? key, required this.onMouvement}) : super(key: key);
+
+  @override
+  _EtatControleurJoystick createState() => _EtatControleurJoystick();
+}
+
+class _EtatControleurJoystick extends State<ControleurJoystick> {
+  final double _rayonBase = 75; // Rayon du fond du joystick
+  final double _rayonStick = 35; // Rayon du stick (la partie mobile)
+
+  Offset _positionStick = Offset.zero; // Position relative du stick par rapport au centre
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanStart: (details) {
+        _positionStick = Offset.zero; // Réinitialise la position au début du glissement
+      },
+      onPanUpdate: (details) {
+        setState(() {
+          // Calcule le déplacement du doigt par rapport au centre du joystick
+          Offset delta = details.localPosition;
+
+          // Limite le stick à l'intérieur du rayon de la base
+          double distance = delta.distance;
+          if (distance > _rayonBase) {
+            delta = Offset.fromDirection(delta.direction, _rayonBase);
+          }
+          _positionStick = delta;
+
+          // Normalise les valeurs de déplacement (-1.0 à 1.0)
+          double xNormalise = _positionStick.dx / _rayonBase;
+          double yNormalise = _positionStick.dy / _rayonBase;
+
+          widget.onMouvement(xNormalise, yNormalise); // Informe le parent du mouvement
+        });
+      },
+      onPanEnd: (details) {
+        setState(() {
+          _positionStick = Offset.zero; // Le stick retourne au centre après relâchement
+          widget.onMouvement(0.0, 0.0); // Informe le parent que le mouvement a cessé
+        });
+      },
+      child: Container(
+        width: _rayonBase * 2,
+        height: _rayonBase * 2,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.4), // Fond du joystick
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+        ),
+        child: Center(
+          child: Transform.translate(
+            offset: _positionStick,
+            child: Container(
+              width: _rayonStick * 2,
+              height: _rayonStick * 2,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.8), // Couleur du stick
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
