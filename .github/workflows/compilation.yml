@@ -46,9 +46,14 @@ jobs:
           channel: 'stable'
           cache: true # Active la mise en cache pour Pub
 
-      # 5. Installe les dépendances (sera rapide si le cache existe)
-      - name: Installation des dépendances Dart
+      - name: Nettoyage du projet Flutter
+        run: flutter clean
+
+      - name: Installation des dépendances
         run: flutter pub get
+
+      - name: Vérification de l'environnement Flutter
+        run: flutter doctor -v
 
       - name: Compilation de l'APK pour Android
         run: flutter build apk --debug --target=lib/mugen_haiti.dart
