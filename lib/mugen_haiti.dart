@@ -42,9 +42,13 @@ class _EtatPageJeu extends State<PageJeu> {
   double _positionXPersonnage = 0.0;
   double _positionYPersonnage = 0.0;
 
-  // Variables pour le mouvement du joystick (seront mises à jour par le listener)
-  double _mouvementJoystickX = 0.0;
-  double _mouvementJoystickY = 0.0;
+  // Variables pour le déplacement du personnage (mises à jour par le joystick)
+  double _deplacementPersonnageX = 0.0;
+  double _deplacementPersonnageY = 0.0;
+
+  // Variables pour la rotation de la caméra (mises à jour par le glissement sur la zone droite)
+  double _rotationCameraX = 0.0;
+  double _rotationCameraY = 0.0;
 
   bool _estInitialise = false; // Pour l'initialisation du personnage au centre
 
@@ -65,12 +69,25 @@ class _EtatPageJeu extends State<PageJeu> {
   @override
   Widget build(BuildContext context) {
     // Calcul de la nouvelle position du personnage en fonction du joystick
-    // Ici, nous faisons un déplacement simple. Pour un vrai jeu, ce serait plus complexe
-    // (physique, collisions, etc.)
-    if (_mouvementJoystickX != 0 || _mouvementJoystickY != 0) {
-      _positionXPersonnage += _mouvementJoystickX * 5; // Multiplicateur de vitesse
-      _positionYPersonnage += _mouvementJoystickY * 5; // Multiplicateur de vitesse
+    // On utilise _deplacementPersonnageX et Y
+    if (_deplacementPersonnageX != 0 || _deplacementPersonnageY != 0) {
+      _positionXPersonnage += _deplacementPersonnageX * 5; // Multiplicateur de vitesse
+      _positionYPersonnage += _deplacementPersonnageY * 5; // Multiplicateur de vitesse
     }
+
+    // Calcul de la couleur de fond de la zone caméra en fonction de la rotation
+    // Plus on glisse, plus la couleur change (exemple simple)
+    // On convertit les deltas de rotation en un facteur de 0 à 1 pour la couleur
+    double facteurCouleurX = (_rotationCameraX.abs() / 100).clamp(0.0, 1.0);
+    double facteurCouleurY = (_rotationCameraY.abs() / 100).clamp(0.0, 1.0);
+    double intensiteTotale = math.max(facteurCouleurX, facteurCouleurY); // La plus forte influence
+
+    // On crée une couleur de base et on la modifie
+    Color couleurBase = Colors.grey[600]!;
+    Color couleurActive = Colors.blue.shade300; // Une couleur plus vive pour l'activité
+
+    Color couleurFondCamera = Color.lerp(couleurBase, couleurActive, intensiteTotale)!;
+
 
     return Scaffold(
       backgroundColor: Colors.grey[800],
@@ -90,8 +107,8 @@ class _EtatPageJeu extends State<PageJeu> {
                     child: ControleurJoystick(
                       onMouvement: (x, y) {
                         setState(() {
-                          _mouvementJoystickX = x;
-                          _mouvementJoystickY = y;
+                          _deplacementPersonnageX = x; // Mise à jour du déplacement du personnage
+                          _deplacementPersonnageY = y;
                         });
                       },
                     ),
@@ -106,15 +123,23 @@ class _EtatPageJeu extends State<PageJeu> {
                   behavior: HitTestBehavior.translucent, // Détecte les gestes sur toute la surface
                   onPanUpdate: (details) {
                     setState(() {
-                      // Pour le moment, cette zone déplace aussi le personnage pour simuler la caméra
-                      // Plus tard, ici on déplacera la caméra, pas le personnage
-                      _positionXPersonnage += details.delta.dx;
-                      _positionYPersonnage += details.delta.dy;
+                      // Mise à jour de la rotation de la caméra
+                      _rotationCameraX += details.delta.dx;
+                      _rotationCameraY += details.delta.dy;
+                      // Limiter les valeurs pour éviter une couleur trop folle
+                      _rotationCameraX = _rotationCameraX.clamp(-100.0, 100.0);
+                      _rotationCameraY = _rotationCameraY.clamp(-100.0, 100.0);
                     });
                   },
                   child: Container(
-                    color: Colors.grey[600], // Couleur pour distinguer la zone caméra
+                    color: couleurFondCamera, // Utilise la couleur calculée
                     // Le contenu de la scène de jeu irait ici
+                    child: Center(
+                      child: Text(
+                        'Caméra: X:${_rotationCameraX.toInt()}, Y:${_rotationCameraY.toInt()}',
+                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -171,21 +196,54 @@ class _EtatControleurJoystick extends State<ControleurJoystick> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
-        _positionStick = Offset.zero; // Réinitialise la position au début du glissement
+        // Centrer le stick sur le point de contact initial
+        // Le localPosition est relatif au GestureDetector.
+        // On veut le positionner par rapport au centre de la base.
+        // Donc, on doit ajuster la position du stick.
+        Offset centreBase = Offset(_rayonBase, _rayonBase);
+        Offset pointDeContactRelatif = details.localPosition;
+
+        // Calculer le vecteur du point de contact par rapport au centre de la base
+        Offset vecteurContact = pointDeContactRelatif - centreBase;
+
+        // Limiter le stick à l'intérieur du rayon de la base
+        double distance = vecteurContact.distance;
+        if (distance > _rayonBase) {
+          vecteurContact = Offset.fromDirection(vecteurContact.direction, _rayonBase);
+        }
+        setState(() {
+          _positionStick = vecteurContact;
+        });
+
+        // Informe le parent du mouvement initial
+        double xNormalise = _positionStick.dx / _rayonBase;
+        double yNormalise = _positionStick.dy / _rayonBase;
+        widget.onMouvement(xNormalise, yNormalise);
       },
       onPanUpdate: (details) {
         setState(() {
           // Calcule le déplacement du doigt par rapport au centre du joystick
-          Offset delta = details.localPosition;
+          // details.localPosition est la position par rapport au GestureDetector.
+          // Pour un joystick "fixe" où le stick bouge à l'intérieur d'une base,
+          // on calcule le déplacement du doigt par rapport au centre de la base du joystick.
+
+          Offset centreBase = Offset(_rayonBase, _rayonBase);
+          Offset pointDeContactRelatif = details.localPosition;
+
+          Offset vecteurContact = pointDeContactRelatif - centreBase;
 
           // Limite le stick à l'intérieur du rayon de la base
-          double distance = delta.distance;
+          double distance = vecteurContact.distance;
           if (distance > _rayonBase) {
-            delta = Offset.fromDirection(delta.direction, _rayonBase);
+            vecteurContact = Offset.fromDirection(vecteurContact.direction, _rayonBase);
           }
-          _positionStick = delta;
+          _positionStick = vecteurContact;
+
 
           // Normalise les valeurs de déplacement (-1.0 à 1.0)
+          // Note: l'axe Y est inversé en Flutter (haut est 0, bas est max)
+          // Pour un joystick de jeu, on veut souvent Y positif vers le haut.
+          // On peut l'inverser ici si nécessaire: -_positionStick.dy
           double xNormalise = _positionStick.dx / _rayonBase;
           double yNormalise = _positionStick.dy / _rayonBase;
 
