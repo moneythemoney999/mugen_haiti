@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import nécessaire pour SystemChrome
+// import 'package:flutter_joystick/flutter_joystick.dart'; // Import pour le joystick (commenté pour débogage)
 
 // La fonction main devient "async" pour pouvoir utiliser "await"
 void main() async {
@@ -42,8 +43,8 @@ class _EtatPageJeu extends State<PageJeu> {
   double _positionYPersonnage = 0.0;
 
   // Variables pour le mouvement du joystick (seront mises à jour par le listener)
-  double _mouvementJoystickX = 0.0;
-  double _mouvementJoystickY = 0.0;
+  // double _mouvementJoystickX = 0.0; // Commenté pour débogage
+  // double _mouvementJoystickY = 0.0; // Commenté pour débogage
 
   bool _estInitialise = false; // Pour l'initialisation du personnage au centre
 
@@ -78,31 +79,11 @@ class _EtatPageJeu extends State<PageJeu> {
                   color: Colors.grey[700], // Couleur pour distinguer la zone joystick
                   child: Align(
                     alignment: const Alignment(0, 0.7), // Aligne le joystick un peu vers le bas
-                    child: Joystick(
-                      listener: (details) {
-                        setState(() {
-                          _mouvementJoystickX = details.x;
-                          _mouvementJoystickY = details.y;
-                          // Pour l'instant, on déplace le personnage directement avec le joystick
-                          // Plus tard, cette logique sera plus complexe pour le mouvement du jeu
-                          // On multiplie par 5 pour une vitesse visible
-                          _positionXPersonnage += details.x * 5;
-                          _positionYPersonnage += details.y * 5;
-                        });
-                      },
-                      // Personnalisation du joystick
-                      base: JoystickBase(
-                        decoration: JoystickBaseDecoration(
-                          color: Colors.blueGrey.shade800,
-                          strokeColor: Colors.blueGrey.shade400,
-                          drawOuterCircle: true,
-                        ),
-                      ),
-                      stick: JoystickStick(
-                        decoration: JoystickStickDecoration(
-                          color: Colors.blueGrey.shade400,
-                        ),
-                      ),
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      color: Colors.purple, // Un simple carré violet pour remplacer le joystick
+                      child: const Center(child: Text("Joystick", style: TextStyle(color: Colors.white))),
                     ),
                   ),
                 ),
