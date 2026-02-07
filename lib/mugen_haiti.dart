@@ -41,10 +41,13 @@ class _EtatPageJeu extends State<PageJeu> {
   // Ces variables suivent la position globale du personnage
   double _positionXPersonnage = 0.0;
   double _positionYPersonnage = 0.0;
+  // Nouvelle variable pour l'angle d'orientation du personnage (en radians)
+  double _angleOrientationPersonnage = 0.0;
 
-  // Variables pour le déplacement du personnage (mises à jour par le joystick)
-  double _deplacementPersonnageX = 0.0;
-  double _deplacementPersonnageY = 0.0;
+  // Variables pour le déplacement du personnage (vitesse avant/arrière du joystick)
+  double _vitessePersonnage = 0.0;
+  // Variables pour la rotation du personnage (vitesse de rotation du joystick)
+  double _vitesseRotationPersonnage = 0.0;
 
   // Variables pour la rotation de la caméra (mises à jour par le glissement sur la zone droite)
   double _rotationCameraX = 0.0;
@@ -68,15 +71,22 @@ class _EtatPageJeu extends State<PageJeu> {
 
   @override
   Widget build(BuildContext context) {
-    // Calcul de la nouvelle position du personnage en fonction du joystick
-    // On utilise _deplacementPersonnageX et Y
-    if (_deplacementPersonnageX != 0 || _deplacementPersonnageY != 0) {
-      _positionXPersonnage += _deplacementPersonnageX * 5; // Multiplicateur de vitesse
-      _positionYPersonnage += _deplacementPersonnageY * 5; // Multiplicateur de vitesse
-    }
+    // === LOGIQUE DE MISE À JOUR DU PERSONNAGE ===
+    // Met à jour l'angle d'orientation
+    _angleOrientationPersonnage += _vitesseRotationPersonnage * 0.1; // Ajuster la sensibilité
+    if (_angleOrientationPersonnage > 2 * math.pi) _angleOrientationPersonnage -= 2 * math.pi;
+    if (_angleOrientationPersonnage < 0) _angleOrientationPersonnage += 2 * math.pi;
 
-    // Calcul de la couleur de fond de la zone caméra en fonction de la rotation
-    // Plus on glisse, plus la couleur change (exemple simple)
+    // Calcul de la nouvelle position en fonction de la vitesse et de l'orientation
+    _positionXPersonnage += _vitessePersonnage * math.cos(_angleOrientationPersonnage) * 5; // Multiplicateur de vitesse
+    _positionYPersonnage += _vitessePersonnage * math.sin(_angleOrientationPersonnage) * 5; // Multiplicateur de vitesse
+
+    // Limitation du personnage aux bords de l'écran (simple)
+    final tailleEcran = MediaQuery.of(context).size;
+    _positionXPersonnage = _positionXPersonnage.clamp(50.0, tailleEcran.width - 50.0);
+    _positionYPersonnage = _positionYPersonnage.clamp(50.0, tailleEcran.height - 50.0);
+
+    // === LOGIQUE DE LA ZONE CAMÉRA (feedback visuel) ===
     // On convertit les deltas de rotation en un facteur de 0 à 1 pour la couleur
     double facteurCouleurX = (_rotationCameraX.abs() / 100).clamp(0.0, 1.0);
     double facteurCouleurY = (_rotationCameraY.abs() / 100).clamp(0.0, 1.0);
@@ -107,8 +117,8 @@ class _EtatPageJeu extends State<PageJeu> {
                     child: ControleurJoystick(
                       onMouvement: (x, y) {
                         setState(() {
-                          _deplacementPersonnageX = x; // Mise à jour du déplacement du personnage
-                          _deplacementPersonnageY = y;
+                          _vitesseRotationPersonnage = x; // Axe X du stick pour la rotation
+                          _vitessePersonnage = -y; // Axe Y du stick pour la vitesse avant/arrière (inversé)
                         });
                       },
                     ),
@@ -131,6 +141,13 @@ class _EtatPageJeu extends State<PageJeu> {
                       _rotationCameraY = _rotationCameraY.clamp(-100.0, 100.0);
                     });
                   },
+                  onPanEnd: (details) {
+                    // Réinitialiser les valeurs après la fin du glissement
+                    setState(() {
+                      _rotationCameraX = 0.0;
+                      _rotationCameraY = 0.0;
+                    });
+                  },
                   child: Container(
                     color: couleurFondCamera, // Utilise la couleur calculée
                     // Le contenu de la scène de jeu irait ici
@@ -151,20 +168,26 @@ class _EtatPageJeu extends State<PageJeu> {
             Positioned(
               left: _positionXPersonnage - 50,
               top: _positionYPersonnage - 50,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Text(
-                    'MH',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+              child: Transform.rotate( // On ajoute une rotation pour le personnage
+                angle: _angleOrientationPersonnage,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Transform.rotate( // Rotation inverse pour le texte
+                      angle: -_angleOrientationPersonnage,
+                      child: const Text(
+                        'MH',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -198,8 +221,6 @@ class _EtatControleurJoystick extends State<ControleurJoystick> {
       onPanStart: (details) {
         // Centrer le stick sur le point de contact initial
         // Le localPosition est relatif au GestureDetector.
-        // On veut le positionner par rapport au centre de la base.
-        // Donc, on doit ajuster la position du stick.
         Offset centreBase = Offset(_rayonBase, _rayonBase);
         Offset pointDeContactRelatif = details.localPosition;
 
@@ -223,10 +244,6 @@ class _EtatControleurJoystick extends State<ControleurJoystick> {
       onPanUpdate: (details) {
         setState(() {
           // Calcule le déplacement du doigt par rapport au centre du joystick
-          // details.localPosition est la position par rapport au GestureDetector.
-          // Pour un joystick "fixe" où le stick bouge à l'intérieur d'une base,
-          // on calcule le déplacement du doigt par rapport au centre de la base du joystick.
-
           Offset centreBase = Offset(_rayonBase, _rayonBase);
           Offset pointDeContactRelatif = details.localPosition;
 
