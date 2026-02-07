@@ -118,7 +118,7 @@ class _EtatPageJeu extends State<PageJeu> {
                       onMouvement: (x, y) {
                         setState(() {
                           _vitesseRotationPersonnage = x; // Axe X du stick pour la rotation
-                          _vitessePersonnage = -y; // Axe Y du stick pour la vitesse avant/arrière (inversé)
+                          _vitessePersonnage = y; // Axe Y du stick pour la vitesse avant/arrière (maintenant corrigé)
                         });
                       },
                     ),
