@@ -73,7 +73,7 @@ class _EtatPageJeu extends State<PageJeu> {
   Widget build(BuildContext context) {
     // === LOGIQUE DE MISE À JOUR DU PERSONNAGE ===
     // Met à jour l'angle d'orientation
-    _angleOrientationPersonnage += _vitesseRotationPersonnage * 0.1; // Ajuster la sensibilité
+    _angleOrientationPersonnage -= _vitesseRotationPersonnage * 0.1; // Ajuster la sensibilité et le sens de rotation (corrigé)
     if (_angleOrientationPersonnage > 2 * math.pi) _angleOrientationPersonnage -= 2 * math.pi;
     if (_angleOrientationPersonnage < 0) _angleOrientationPersonnage += 2 * math.pi;
 
@@ -118,7 +118,7 @@ class _EtatPageJeu extends State<PageJeu> {
                       onMouvement: (x, y) {
                         setState(() {
                           _vitesseRotationPersonnage = x; // Axe X du stick pour la rotation
-                          _vitessePersonnage = y; // Axe Y du stick pour la vitesse avant/arrière (maintenant corrigé)
+                          _vitessePersonnage = -y; // Axe Y du stick pour la vitesse avant/arrière (maintenant corrigé)
                         });
                       },
                     ),
