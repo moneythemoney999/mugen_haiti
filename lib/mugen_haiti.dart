@@ -41,13 +41,12 @@ class _EtatPageJeu extends State<PageJeu> {
   // Ces variables suivent la position globale du personnage
   double _positionXPersonnage = 0.0;
   double _positionYPersonnage = 0.0;
-  // Nouvelle variable pour l'angle d'orientation du personnage (en radians)
-  double _angleOrientationPersonnage = 0.0;
+  // L'angle d'orientation n'est plus utilisé pour le mouvement, mais peut servir pour la direction visuelle
+  // double _angleOrientationPersonnage = 0.0;
 
-  // Variables pour le déplacement du personnage (vitesse avant/arrière du joystick)
-  double _vitessePersonnage = 0.0;
-  // Variables pour la rotation du personnage (vitesse de rotation du joystick)
-  double _vitesseRotationPersonnage = 0.0;
+  // Variables pour le déplacement du personnage (vitesses horizontale et verticale écran-relative)
+  double _vitesseHorizontalePersonnage = 0.0;
+  double _vitesseVerticalePersonnage = 0.0;
 
   // Variables pour la rotation de la caméra (mises à jour par le glissement sur la zone droite)
   double _rotationCameraX = 0.0;
@@ -71,15 +70,9 @@ class _EtatPageJeu extends State<PageJeu> {
 
   @override
   Widget build(BuildContext context) {
-    // === LOGIQUE DE MISE À JOUR DU PERSONNAGE ===
-    // Met à jour l'angle d'orientation
-    _angleOrientationPersonnage -= _vitesseRotationPersonnage * 0.1; // Ajuster la sensibilité et le sens de rotation (corrigé)
-    if (_angleOrientationPersonnage > 2 * math.pi) _angleOrientationPersonnage -= 2 * math.pi;
-    if (_angleOrientationPersonnage < 0) _angleOrientationPersonnage += 2 * math.pi;
-
-    // Calcul de la nouvelle position en fonction de la vitesse et de l'orientation
-    _positionXPersonnage += _vitessePersonnage * math.cos(_angleOrientationPersonnage) * 5; // Multiplicateur de vitesse
-    _positionYPersonnage += _vitessePersonnage * math.sin(_angleOrientationPersonnage) * 5; // Multiplicateur de vitesse
+    // === LOGIQUE DE MISE À JOUR DU PERSONNAGE (MOUVEMENT ÉCRAN-RELATIF) ===
+    _positionXPersonnage += _vitesseHorizontalePersonnage * 5; // Multiplicateur de vitesse
+    _positionYPersonnage += _vitesseVerticalePersonnage * 5; // Multiplicateur de vitesse
 
     // Limitation du personnage aux bords de l'écran (simple)
     final tailleEcran = MediaQuery.of(context).size;
@@ -117,8 +110,9 @@ class _EtatPageJeu extends State<PageJeu> {
                     child: ControleurJoystick(
                       onMouvement: (x, y) {
                         setState(() {
-                          _vitesseRotationPersonnage = x; // Axe X du stick pour la rotation
-                          _vitessePersonnage = -y; // Axe Y du stick pour la vitesse avant/arrière (maintenant corrigé)
+                          _vitesseHorizontalePersonnage = x; // Axe X du stick pour le mouvement horizontal
+                          _vitesseVerticalePersonnage = y;    // Axe Y du stick pour le mouvement vertical (négatif pour monter, positif pour descendre)
+                          // L'angle d'orientation n'est plus directement lié au joystick pour ce mode de mouvement
                         });
                       },
                     ),
@@ -168,26 +162,20 @@ class _EtatPageJeu extends State<PageJeu> {
             Positioned(
               left: _positionXPersonnage - 50,
               top: _positionYPersonnage - 50,
-              child: Transform.rotate( // On ajoute une rotation pour le personnage
-                angle: _angleOrientationPersonnage,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Transform.rotate( // Rotation inverse pour le texte
-                      angle: -_angleOrientationPersonnage,
-                      child: const Text(
-                        'MH',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      ),
+              child: Container( // On retire la rotation visuelle pour le moment
+                width: 100,
+                height: 100,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center( // On retire la rotation inverse du texte
+                  child: Text(
+                    'MH',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
                     ),
                   ),
                 ),
