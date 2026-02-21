@@ -41,16 +41,18 @@ class _EtatPageJeu extends State<PageJeu> {
   // Ces variables suivent la position globale du personnage
   double _positionXPersonnage = 0.0;
   double _positionYPersonnage = 0.0;
-  // L'angle d'orientation n'est plus utilisé pour le mouvement, mais peut servir pour la direction visuelle
-  // double _angleOrientationPersonnage = 0.0;
+  // Variable pour l'angle d'orientation visuelle du personnage (en radians)
+  double _angleOrientationPersonnage = 0.0;
 
   // Variables pour le déplacement du personnage (vitesses horizontale et verticale écran-relative)
   double _vitesseHorizontalePersonnage = 0.0;
   double _vitesseVerticalePersonnage = 0.0;
 
   // Variables pour la rotation de la caméra (mises à jour par le glissement sur la zone droite)
-  double _rotationCameraX = 0.0;
-  double _rotationCameraY = 0.0;
+  // Elles représentent le delta de mouvement et non l'angle absolu
+  double _deltaRotationCameraX = 0.0;
+  double _deltaRotationCameraY = 0.0;
+
 
   bool _estInitialise = false; // Pour l'initialisation du personnage au centre
 
@@ -74,6 +76,12 @@ class _EtatPageJeu extends State<PageJeu> {
     _positionXPersonnage += _vitesseHorizontalePersonnage * 5; // Multiplicateur de vitesse
     _positionYPersonnage += _vitesseVerticalePersonnage * 5; // Multiplicateur de vitesse
 
+    // Mise à jour de l'angle d'orientation visuelle par la zone caméra
+    _angleOrientationPersonnage += _deltaRotationCameraX * 0.01; // Sensibilité de la rotation
+    if (_angleOrientationPersonnage > 2 * math.pi) _angleOrientationPersonnage -= 2 * math.pi;
+    if (_angleOrientationPersonnage < 0) _angleOrientationPersonnage += 2 * math.pi;
+
+
     // Limitation du personnage aux bords de l'écran (simple)
     final tailleEcran = MediaQuery.of(context).size;
     _positionXPersonnage = _positionXPersonnage.clamp(50.0, tailleEcran.width - 50.0);
@@ -81,8 +89,8 @@ class _EtatPageJeu extends State<PageJeu> {
 
     // === LOGIQUE DE LA ZONE CAMÉRA (feedback visuel) ===
     // On convertit les deltas de rotation en un facteur de 0 à 1 pour la couleur
-    double facteurCouleurX = (_rotationCameraX.abs() / 100).clamp(0.0, 1.0);
-    double facteurCouleurY = (_rotationCameraY.abs() / 100).clamp(0.0, 1.0);
+    double facteurCouleurX = (_deltaRotationCameraX.abs() / 100).clamp(0.0, 1.0);
+    double facteurCouleurY = (_deltaRotationCameraY.abs() / 100).clamp(0.0, 1.0);
     double intensiteTotale = math.max(facteurCouleurX, facteurCouleurY); // La plus forte influence
 
     // On crée une couleur de base et on la modifie
@@ -112,7 +120,6 @@ class _EtatPageJeu extends State<PageJeu> {
                         setState(() {
                           _vitesseHorizontalePersonnage = x; // Axe X du stick pour le mouvement horizontal
                           _vitesseVerticalePersonnage = y;    // Axe Y du stick pour le mouvement vertical (négatif pour monter, positif pour descendre)
-                          // L'angle d'orientation n'est plus directement lié au joystick pour ce mode de mouvement
                         });
                       },
                     ),
@@ -127,19 +134,22 @@ class _EtatPageJeu extends State<PageJeu> {
                   behavior: HitTestBehavior.translucent, // Détecte les gestes sur toute la surface
                   onPanUpdate: (details) {
                     setState(() {
-                      // Mise à jour de la rotation de la caméra
-                      _rotationCameraX += details.delta.dx;
-                      _rotationCameraY += details.delta.dy;
-                      // Limiter les valeurs pour éviter une couleur trop folle
-                      _rotationCameraX = _rotationCameraX.clamp(-100.0, 100.0);
-                      _rotationCameraY = _rotationCameraY.clamp(-100.0, 100.0);
+                      // Mise à jour des deltas de rotation pour la caméra
+                      _deltaRotationCameraX = details.delta.dx;
+                      _deltaRotationCameraY = details.delta.dy;
+
+                      // La rotation du personnage est directement mise à jour ici
+                      _angleOrientationPersonnage += _deltaRotationCameraX * 0.01; // Ajuster la sensibilité
+                      if (_angleOrientationPersonnage > 2 * math.pi) _angleOrientationPersonnage -= 2 * math.pi;
+                      if (_angleOrientationPersonnage < 0) _angleOrientationPersonnage += 2 * math.pi;
+
                     });
                   },
                   onPanEnd: (details) {
-                    // Réinitialiser les valeurs après la fin du glissement
+                    // Réinitialiser les deltas après la fin du glissement
                     setState(() {
-                      _rotationCameraX = 0.0;
-                      _rotationCameraY = 0.0;
+                      _deltaRotationCameraX = 0.0;
+                      _deltaRotationCameraY = 0.0;
                     });
                   },
                   child: Container(
@@ -147,7 +157,7 @@ class _EtatPageJeu extends State<PageJeu> {
                     // Le contenu de la scène de jeu irait ici
                     child: Center(
                       child: Text(
-                        'Caméra: X:${_rotationCameraX.toInt()}, Y:${_rotationCameraY.toInt()}',
+                        'Caméra: dX:${_deltaRotationCameraX.toInt()}, dY:${_deltaRotationCameraY.toInt()}',
                         style: const TextStyle(color: Colors.white, fontSize: 18),
                       ),
                     ),
@@ -162,20 +172,26 @@ class _EtatPageJeu extends State<PageJeu> {
             Positioned(
               left: _positionXPersonnage - 50,
               top: _positionYPersonnage - 50,
-              child: Container( // On retire la rotation visuelle pour le moment
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center( // On retire la rotation inverse du texte
-                  child: Text(
-                    'MH',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+              child: Transform.rotate( // On ajoute la rotation visuelle du personnage
+                angle: _angleOrientationPersonnage,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center( // Le texte tourne avec le personnage
+                    child: Transform.rotate( // Rotation inverse pour le texte
+                      angle: -_angleOrientationPersonnage, // Pour que le texte reste lisible
+                      child: const Text(
+                        'MH',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -208,7 +224,6 @@ class _EtatControleurJoystick extends State<ControleurJoystick> {
     return GestureDetector(
       onPanStart: (details) {
         // Centrer le stick sur le point de contact initial
-        // Le localPosition est relatif au GestureDetector.
         Offset centreBase = Offset(_rayonBase, _rayonBase);
         Offset pointDeContactRelatif = details.localPosition;
 
